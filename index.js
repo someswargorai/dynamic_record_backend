@@ -18,6 +18,9 @@ app.use(express.json());
 const authRoutes = require("./routes/authRoutes");
 const employeeRoutes = require("./routes/employeeRoutes");
 
+app.get("/",(req,res)=>{
+    res.json("Dynamic Record backend is listening on 3001")
+})
 app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeeRoutes);
 
