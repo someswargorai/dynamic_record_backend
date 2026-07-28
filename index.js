@@ -17,12 +17,14 @@ app.use(express.json());
 
 const authRoutes = require("./routes/authRoutes");
 const employeeRoutes = require("./routes/employeeRoutes");
+const templateRoutes = require("./routes/templateRoutes");
 
 app.get("/",(req,res)=>{
     res.json("Dynamic Record backend is listening on 3001")
 })
 app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeeRoutes);
+app.use("/api/templates", templateRoutes);
 
 (async()=>{
     await db_connection();

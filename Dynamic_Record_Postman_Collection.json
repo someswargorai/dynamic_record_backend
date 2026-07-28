@@ -1,0 +1,122 @@
+{
+  "info": {
+    "name": "Dynamic Record API",
+    "description": "API collection for Dynamic Record Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Admin/Employee)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"admin+1@gmail.com\",\r\n  \"password\": \"admin123\"\r\n}"
+            },
+            "url": {
+              "raw": "https://dynamic-record-backend.onrender.com/api/auth/login",
+              "protocol": "https",
+              "host": [
+                "dynamic-record-backend",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"employee_name\": \"John Doe\",\r\n  \"employee_email\": \"johndoe@example.com\",\r\n  \"employee_address\": \"123 Main St, New York\",\r\n  \"status\": \"active\"\r\n}"
+            },
+            "url": {
+              "raw": "https://dynamic-record-backend.onrender.com/api/employees",
+              "protocol": "https",
+              "host": [
+                "dynamic-record-backend",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "employees"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Employees (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://dynamic-record-backend.onrender.com/api/employees?page=1&limit=10",
+              "protocol": "https",
+              "host": [
+                "dynamic-record-backend",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
