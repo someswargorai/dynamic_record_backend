@@ -45,7 +45,49 @@ const getEmployeesByParentId = async (parentId, skip = 0, limit = 10) => {
   return { employees, totalEmployees };
 };
 
+const updateEmployee = async (employeeId, parentId, updateData) => {
+  const { employee_name, employee_email, employee_address } = updateData;
+
+  const employee = await Employee.findOneAndUpdate(
+    { _id: employeeId, parentId },
+    { employee_name, employee_email, employee_address },
+    { new: true }
+  ).select("-password");
+
+  if (!employee) {
+    throw new Error("Employee not found or unauthorized");
+  }
+
+  return employee;
+};
+
+const toggleEmployeeStatus = async (employeeId, parentId) => {
+  const employee = await Employee.findOne({ _id: employeeId, parentId });
+
+  if (!employee) {
+    throw new Error("Employee not found or unauthorized");
+  }
+
+  employee.status = employee.status === "active" ? "inactive" : "active";
+  await employee.save();
+
+  return { id: employee._id, status: employee.status };
+};
+
+const deleteEmployee = async (employeeId, parentId) => {
+  const employee = await Employee.findOneAndDelete({ _id: employeeId, parentId });
+
+  if (!employee) {
+    throw new Error("Employee not found or unauthorized");
+  }
+
+  return { id: employeeId, message: "Employee deleted successfully" };
+};
+
 module.exports = {
   createEmployee,
-  getEmployeesByParentId
+  getEmployeesByParentId,
+  updateEmployee,
+  toggleEmployeeStatus,
+  deleteEmployee
 };

@@ -52,7 +52,68 @@ const getEmployees = async (req, res) => {
   }
 };
 
+const editEmployee = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can edit employees." });
+    }
+
+    const parentId = req.user.id;
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const updatedEmployee = await employeeService.updateEmployee(id, parentId, updateData);
+
+    res.status(200).json({
+      message: "Employee updated successfully",
+      employee: updatedEmployee
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const toggleEmployeeStatus = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can change employee status." });
+    }
+
+    const parentId = req.user.id;
+    const { id } = req.params;
+
+    const result = await employeeService.toggleEmployeeStatus(id, parentId);
+
+    res.status(200).json({
+      message: "Employee status updated",
+      status: result.status
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const deleteEmployee = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can delete employees." });
+    }
+
+    const parentId = req.user.id;
+    const { id } = req.params;
+
+    const result = await employeeService.deleteEmployee(id, parentId);
+
+    res.status(200).json({ message: result.message });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createEmployee,
-  getEmployees
+  getEmployees,
+  editEmployee,
+  toggleEmployeeStatus,
+  deleteEmployee
 };
