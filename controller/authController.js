@@ -16,7 +16,8 @@ const login = async (req, res) => {
       role,
       user: {
         id: user._id,
-        email: role === "admin" ? user.email : user.employee_email
+        email: role === "admin" ? user.email : user.employee_email,
+        role: role
       }
     });
   } catch (error) {

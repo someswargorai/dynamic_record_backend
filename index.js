@@ -19,6 +19,7 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 const authRoutes = require("./routes/authRoutes");
 const employeeRoutes = require("./routes/employeeRoutes");
 const templateRoutes = require("./routes/templateRoutes");
+const recordRoutes = require("./routes/recordRoutes");
 
 app.get("/",(req,res)=>{
     res.json("Dynamic Record backend is listening on 3001")
@@ -26,6 +27,7 @@ app.get("/",(req,res)=>{
 app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/templates", templateRoutes);
+app.use("/api/records", recordRoutes);
 
 (async()=>{
     await db_connection();

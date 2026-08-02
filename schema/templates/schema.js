@@ -44,4 +44,6 @@ const TemplateSchema = new mongoose.Schema({
   fields: [CustomFieldSchema]
 }, { timestamps: true });
 
+TemplateSchema.index({ name: 'text' });
+
 module.exports = mongoose.model("Template", TemplateSchema);
