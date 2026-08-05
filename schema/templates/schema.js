@@ -40,6 +40,10 @@ const TemplateSchema = new mongoose.Schema({
     type: Number,
     default: 220
   },
+  cameraAccess: {
+    type: Boolean,
+    default: false
+  },
   access: [AccessUserSchema],
   fields: [CustomFieldSchema]
 }, { timestamps: true });
