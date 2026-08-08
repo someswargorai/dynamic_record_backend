@@ -13,6 +13,10 @@ const AdminSchema = new mongoose.Schema({
   company_name: {
     type: String,
     required: true
+  },
+  googleDriveCredentials: {
+    clientId: { type: String, default: "" },
+    clientSecret: { type: String, default: "" }
   }
 });
 
