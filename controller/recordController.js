@@ -1,31 +1,42 @@
 const recordService = require("../services/recordService");
-const cloudinary = require('cloudinary').v2;
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+const s3 = require("../lib/s3");
+const { PutObjectCommand } = require("@aws-sdk/client-s3");
+const sharp = require("sharp");
 
 const createRecord = async (req, res) => {
   try {
     const adminId = req.user.role === "admin" ? req.user.id : req.user.parentId;
     if (!adminId) return res.status(400).json({ message: "Unable to determine admin context" });
 
-    let finalData = { ...req.body.data };
+    // With multer, data might come as a JSON string
+    let finalData = typeof req.body.data === 'string' ? JSON.parse(req.body.data) : { ...req.body.data };
 
-    // Check if there is an attached photo and if it is a base64 string
-    if (finalData["Attached Photo"] && finalData["Attached Photo"].startsWith("data:image")) {
-      try {
-        const uploadResponse = await cloudinary.uploader.upload(finalData["Attached Photo"], {
-          folder: "dynamic_records"
-        });
-        // Replace base64 with secure url
-        finalData["Attached Photo"] = uploadResponse.secure_url;
-      } catch (uploadError) {
-        console.error("Cloudinary Upload Error:", uploadError);
-        return res.status(500).json({ message: "Failed to upload image to cloud storage" });
-      }
+    // If an image was uploaded, process it
+    if (req.file) {
+      // 1. Compress the image using sharp
+      const compressedImageBuffer = await sharp(req.file.buffer)
+        .resize({ width: 1920, withoutEnlargement: true }) // Prevent massive dimensions
+        .jpeg({ quality: 70 }) // 70 quality will easily bring almost any photo under 2MB
+        .toBuffer();
+
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const filename = `dynamic_records/${uniqueSuffix}.jpg`; // always save as jpg
+      const bucketName = process.env.AWS_S3_BUCKET_NAME || "dummy-bucket-name";
+      const region = process.env.AWS_REGION || "us-east-1";
+
+      // 2. Upload the compressed buffer to S3
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucketName,
+          Key: filename,
+          Body: compressedImageBuffer,
+          ContentType: "image/jpeg",
+        })
+      );
+
+      // 3. Construct the public S3 URL and attach it to the data
+      const s3Url = `https://${bucketName}.s3.${region}.amazonaws.com/${filename}`;
+      finalData["Attached Photo"] = s3Url;
     }
 
     const recordData = {
