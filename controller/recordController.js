@@ -78,7 +78,54 @@ const getRecords = async (req, res) => {
   }
 };
 
+const updateRecord = async (req, res) => {
+  try {
+    const adminId = req.user.role === "admin" ? req.user.id : req.user.parentId;
+    if (!adminId) return res.status(400).json({ message: "Unable to determine admin context" });
+
+    const recordId = req.params.id;
+    let finalData = { ...req.body.data };
+
+    // Check if there is an attached photo and if it is a new base64 string
+    if (finalData["Attached Photo"] && finalData["Attached Photo"].startsWith("data:image")) {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(finalData["Attached Photo"], {
+          folder: "dynamic_records"
+        });
+        // Replace base64 with secure url
+        finalData["Attached Photo"] = uploadResponse.secure_url;
+      } catch (uploadError) {
+        console.error("Cloudinary Upload Error:", uploadError);
+        return res.status(500).json({ message: "Failed to upload image to cloud storage" });
+      }
+    }
+
+    const updatedRecord = await recordService.updateRecordById(recordId, { data: finalData });
+    if (!updatedRecord) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+    res.status(200).json({ message: "Record updated successfully", record: updatedRecord });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const deleteRecord = async (req, res) => {
+  try {
+    const recordId = req.params.id;
+    const deletedRecord = await recordService.deleteRecordById(recordId);
+    if (!deletedRecord) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+    res.status(200).json({ message: "Record deleted successfully" });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createRecord,
-  getRecords
+  getRecords,
+  updateRecord,
+  deleteRecord
 };

@@ -8,5 +8,7 @@ router.use(authMiddleware);
 
 router.post("/", recordController.createRecord);
 router.get("/", recordController.getRecords);
+router.put("/:id", recordController.updateRecord);
+router.delete("/:id", recordController.deleteRecord);
 
 module.exports = router;

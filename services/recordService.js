@@ -9,6 +9,22 @@ const createRecord = async (recordData) => {
   }
 };
 
+const updateRecordById = async (id, updateData) => {
+  try {
+    return await Record.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+  } catch (error) {
+    throw new Error("Failed to update record: " + error.message);
+  }
+};
+
+const deleteRecordById = async (id) => {
+  try {
+    return await Record.findByIdAndDelete(id);
+  } catch (error) {
+    throw new Error("Failed to delete record: " + error.message);
+  }
+};
+
 const mongoose = require("mongoose");
 
 const getRecordsByAdmin = async (adminId, { templateId, search = "", page = 1, limit = 10 } = {}) => {
@@ -131,5 +147,7 @@ const getRecordsByAdmin = async (adminId, { templateId, search = "", page = 1, l
 
 module.exports = {
   createRecord,
-  getRecordsByAdmin
+  getRecordsByAdmin,
+  updateRecordById,
+  deleteRecordById
 };
