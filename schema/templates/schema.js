@@ -1,20 +1,22 @@
 const mongoose = require("mongoose");
 
 const AccessUserSchema = new mongoose.Schema({
+  id: { type: String },
   name: { type: String, required: true },
   email: { type: String, required: true }
-}, { _id: true });
+}, { _id: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 const CustomFieldSchema = new mongoose.Schema({
+  id: { type: String },
   label: { type: String, required: true },
   type: { 
     type: String, 
     enum: ["text", "textarea", "dropdown", "radio", "multiselect"], 
     required: true 
   },
-  options: [{ type: String }],
+  options: { type: [String], default: [] },
   required: { type: Boolean, default: false }
-}, { _id: true });
+}, { _id: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 const TemplateSchema = new mongoose.Schema({
   adminId: {
@@ -46,7 +48,7 @@ const TemplateSchema = new mongoose.Schema({
   },
   access: [AccessUserSchema],
   fields: [CustomFieldSchema]
-}, { timestamps: true });
+}, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 TemplateSchema.index({ name: 'text' });
 
