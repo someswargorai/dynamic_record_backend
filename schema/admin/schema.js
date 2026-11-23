@@ -16,7 +16,9 @@ const AdminSchema = new mongoose.Schema({
   },
   googleDriveCredentials: {
     clientId: { type: String, default: "" },
-    clientSecret: { type: String, default: "" }
+    clientSecret: { type: String, default: "" },
+    connectedEmail: { type: String, default: "" },
+    refreshToken: { type: String, default: "" }
   }
 });
 

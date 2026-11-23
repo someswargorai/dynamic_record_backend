@@ -13,20 +13,21 @@ const getProfile = async (req, res) => {
 
 const updateGoogleDriveCredentials = async (req, res) => {
   try {
-    const { clientId, clientSecret } = req.body;
+    const { clientId, clientSecret, connectedEmail, refreshToken } = req.body;
     
     if (req.user.role !== "admin") {
       return res.status(403).json({ message: "Only admins can update credentials" });
     }
 
+    const updateFields = {};
+    if (clientId !== undefined) updateFields["googleDriveCredentials.clientId"] = clientId;
+    if (clientSecret !== undefined) updateFields["googleDriveCredentials.clientSecret"] = clientSecret;
+    if (connectedEmail !== undefined) updateFields["googleDriveCredentials.connectedEmail"] = connectedEmail;
+    if (refreshToken !== undefined) updateFields["googleDriveCredentials.refreshToken"] = refreshToken;
+
     const admin = await Admin.findByIdAndUpdate(
       req.user.id,
-      {
-        $set: {
-          "googleDriveCredentials.clientId": clientId,
-          "googleDriveCredentials.clientSecret": clientSecret
-        }
-      },
+      { $set: updateFields },
       { new: true }
     ).select("-password");
 
