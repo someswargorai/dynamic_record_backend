@@ -33,7 +33,7 @@ app.use("/api/records", recordRoutes);
 
 (async()=>{
     await db_connection();
-    app.listen(3001, () => {
+    app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
 })();
