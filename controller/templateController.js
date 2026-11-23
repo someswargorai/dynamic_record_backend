@@ -1,4 +1,11 @@
 const templateService = require("../services/templateService");
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const createTemplate = async (req, res) => {
   try {
@@ -8,7 +15,20 @@ const createTemplate = async (req, res) => {
     }
 
     const adminId = req.user.id;
-    const templateData = req.body;
+    const templateData = { ...req.body };
+
+    if (templateData.image && typeof templateData.image === "string" && templateData.image.startsWith("data:image")) {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(templateData.image, {
+          folder: "dynamic_templates",
+          resource_type: "image",
+          timeout: 45000
+        });
+        templateData.image = uploadResponse.secure_url;
+      } catch (uploadError) {
+        console.warn("Cloudinary upload failed for template image, retaining raw image:", uploadError.message);
+      }
+    }
 
     const newTemplate = await templateService.createTemplate(adminId, templateData);
     res.status(201).json({ message: "Template created successfully", template: newTemplate });
@@ -91,7 +111,22 @@ const updateTemplate = async (req, res) => {
   try {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Only admins can modify templates" });
 
-    const updatedTemplate = await templateService.updateTemplate(req.params.id, req.user.id, req.body);
+    const templateData = { ...req.body };
+
+    if (templateData.image && typeof templateData.image === "string" && templateData.image.startsWith("data:image")) {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(templateData.image, {
+          folder: "dynamic_templates",
+          resource_type: "image",
+          timeout: 45000
+        });
+        templateData.image = uploadResponse.secure_url;
+      } catch (uploadError) {
+        console.warn("Cloudinary upload failed for template image, retaining raw image:", uploadError.message);
+      }
+    }
+
+    const updatedTemplate = await templateService.updateTemplate(req.params.id, req.user.id, templateData);
     if (!updatedTemplate) return res.status(404).json({ message: "Template not found" });
 
     res.status(200).json({ message: "Template updated successfully", template: updatedTemplate });

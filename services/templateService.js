@@ -1,11 +1,17 @@
+const mongoose = require("mongoose");
 const Template = require("../schema/templates/schema");
+
+const isValidObjectId = (id) => {
+  if (!id) return false;
+  return mongoose.Types.ObjectId.isValid(id) && String(new mongoose.Types.ObjectId(id)) === String(id);
+};
 
 const normalizeFields = (fields) => {
   if (!Array.isArray(fields)) return [];
   return fields.map((f) => {
     const fieldId = f.id || (f._id ? f._id.toString() : undefined);
     return {
-      ...(f._id ? { _id: f._id } : {}),
+      ...(f._id && isValidObjectId(f._id) ? { _id: f._id } : {}),
       id: fieldId,
       label: f.label || "",
       type: f.type || "text",
@@ -18,7 +24,7 @@ const normalizeFields = (fields) => {
 const normalizeAccess = (access) => {
   if (!Array.isArray(access)) return [];
   return access.map((a) => ({
-    ...(a._id ? { _id: a._id } : {}),
+    ...(a._id && isValidObjectId(a._id) ? { _id: a._id } : {}),
     id: a.id || (a._id ? a._id.toString() : undefined),
     name: a.name || "",
     email: a.email || ""
