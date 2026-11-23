@@ -30,6 +30,7 @@ const login = async (email, password) => {
   const tokenPayload = {
     id: user._id,
     role,
+    name: role === "admin" ? (user.company_name || "Admin") : (user.employee_name || "Employee"),
     email: role === "admin" ? user.email : user.employee_email
   };
 

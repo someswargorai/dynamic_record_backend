@@ -9,30 +9,72 @@ cloudinary.config({
 
 const createRecord = async (req, res) => {
   try {
-    const adminId = req.user.role === "admin" ? req.user.id : req.user.parentId;
-    if (!adminId) return res.status(400).json({ message: "Unable to determine admin context" });
+    let adminId = req.user.role === "admin" ? req.user.id : req.user.parentId;
+    if (!adminId && req.user.role === "employee") {
+      const Employee = require("../schema/employees/schema");
+      const emp = await Employee.findById(req.user.id).lean();
+      if (emp && emp.parentId) {
+        adminId = emp.parentId;
+      }
+    }
+    if (!adminId) {
+      return res.status(400).json({ message: "Unable to determine admin context for this account." });
+    }
 
-    let finalData = { ...req.body.data };
+    let templateId = req.body.templateId;
+    let finalData = req.body.data;
+
+    // Handle stringified data if sent via FormData or raw payload
+    if (typeof finalData === "string") {
+      try {
+        finalData = JSON.parse(finalData);
+      } catch (parseErr) {
+        return res.status(400).json({ message: "Invalid JSON format for record data." });
+      }
+    }
+
+    if (!templateId) {
+      return res.status(400).json({ message: "Template ID is required." });
+    }
+
+    if (!finalData || typeof finalData !== "object") {
+      return res.status(400).json({ message: "Record data is required." });
+    }
+
+    // Determine submitter name reliably
+    let submitterName = req.user.name || req.user.employee_name || req.user.company_name;
+    if (!submitterName || submitterName === "Unknown") {
+      if (req.user.role === "employee") {
+        const Employee = require("../schema/employees/schema");
+        const emp = await Employee.findById(req.user.id).lean();
+        submitterName = emp?.employee_name || req.user.email?.split("@")[0] || "Employee";
+      } else {
+        const Admin = require("../schema/admin/schema");
+        const admin = await Admin.findById(req.user.id).lean();
+        submitterName = admin?.company_name || req.user.email?.split("@")[0] || "Admin";
+      }
+    }
 
     // Check if there is an attached photo and if it is a base64 string
-    if (finalData["Attached Photo"] && finalData["Attached Photo"].startsWith("data:image")) {
+    if (finalData["Attached Photo"] && typeof finalData["Attached Photo"] === "string" && finalData["Attached Photo"].startsWith("data:image")) {
       try {
         const uploadResponse = await cloudinary.uploader.upload(finalData["Attached Photo"], {
-          folder: "dynamic_records"
+          folder: "dynamic_records",
+          resource_type: "image",
+          timeout: 45000
         });
-        // Replace base64 with secure url
         finalData["Attached Photo"] = uploadResponse.secure_url;
       } catch (uploadError) {
         console.error("Cloudinary Upload Error:", uploadError);
-        return res.status(500).json({ message: "Failed to upload image to cloud storage" });
+        return res.status(500).json({ message: "Failed to upload image to cloud storage: " + (uploadError.message || "Timeout") });
       }
     }
 
     const recordData = {
-      templateId: req.body.templateId,
-      adminId: adminId,
+      templateId,
+      adminId,
       submittedBy: req.user.id,
-      submitterName: req.user.name || "Unknown",
+      submitterName,
       submitterEmail: req.user.email,
       data: finalData
     };
@@ -40,35 +82,36 @@ const createRecord = async (req, res) => {
     const newRecord = await recordService.createRecord(recordData);
     res.status(201).json({ message: "Record submitted successfully", record: newRecord });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error("Error creating record:", error);
+    res.status(400).json({ message: error.message || "Failed to create record" });
   }
 };
 
 const getRecords = async (req, res) => {
   try {
-    const adminId = req.user.role === "admin" ? req.user.id : req.user.parentId;
+    let adminId = req.user.role === "admin" ? req.user.id : req.user.parentId;
+    if (!adminId && req.user.role === "employee") {
+      const Employee = require("../schema/employees/schema");
+      const emp = await Employee.findById(req.user.id).lean();
+      if (emp && emp.parentId) {
+        adminId = emp.parentId;
+      }
+    }
     if (!adminId) return res.status(400).json({ message: "Unable to determine admin context" });
 
     const { templateId, search, page = 1, limit = 10 } = req.query;
+    const submittedBy = req.user.role === "employee" ? req.user.id : null;
 
     const result = await recordService.getRecordsByAdmin(adminId, {
       templateId,
       search,
       page: parseInt(page),
-      limit: parseInt(limit)
+      limit: parseInt(limit),
+      submittedBy
     });
 
-    let records = result.records;
-
-    // If it's an employee, maybe they only see their own submitted records
-    if (req.user.role === "employee") {
-      records = records.filter(r => r.submittedBy.toString() === req.user.id);
-      // Note: Pagination counts might be slightly off if we filter post-db for employees. 
-      // A better way would be adding submittedBy to matchStage, but sticking to current logic for now.
-    }
-
     res.status(200).json({ 
-      records,
+      records: result.records,
       totalItems: result.totalItems,
       totalPages: result.totalPages,
       currentPage: result.currentPage
@@ -80,23 +123,43 @@ const getRecords = async (req, res) => {
 
 const updateRecord = async (req, res) => {
   try {
-    const adminId = req.user.role === "admin" ? req.user.id : req.user.parentId;
+    let adminId = req.user.role === "admin" ? req.user.id : req.user.parentId;
+    if (!adminId && req.user.role === "employee") {
+      const Employee = require("../schema/employees/schema");
+      const emp = await Employee.findById(req.user.id).lean();
+      if (emp && emp.parentId) {
+        adminId = emp.parentId;
+      }
+    }
     if (!adminId) return res.status(400).json({ message: "Unable to determine admin context" });
 
     const recordId = req.params.id;
-    let finalData = { ...req.body.data };
+    let finalData = req.body.data;
+
+    if (typeof finalData === "string") {
+      try {
+        finalData = JSON.parse(finalData);
+      } catch (parseErr) {
+        return res.status(400).json({ message: "Invalid JSON format for record data." });
+      }
+    }
+
+    if (!finalData || typeof finalData !== "object") {
+      return res.status(400).json({ message: "Record data is required." });
+    }
 
     // Check if there is an attached photo and if it is a new base64 string
-    if (finalData["Attached Photo"] && finalData["Attached Photo"].startsWith("data:image")) {
+    if (finalData["Attached Photo"] && typeof finalData["Attached Photo"] === "string" && finalData["Attached Photo"].startsWith("data:image")) {
       try {
         const uploadResponse = await cloudinary.uploader.upload(finalData["Attached Photo"], {
-          folder: "dynamic_records"
+          folder: "dynamic_records",
+          resource_type: "image",
+          timeout: 45000
         });
-        // Replace base64 with secure url
         finalData["Attached Photo"] = uploadResponse.secure_url;
       } catch (uploadError) {
         console.error("Cloudinary Upload Error:", uploadError);
-        return res.status(500).json({ message: "Failed to upload image to cloud storage" });
+        return res.status(500).json({ message: "Failed to upload image to cloud storage: " + (uploadError.message || "Timeout") });
       }
     }
 

@@ -27,9 +27,48 @@ const deleteRecordById = async (id) => {
 
 const mongoose = require("mongoose");
 
-const getRecordsByAdmin = async (adminId, { templateId, search = "", page = 1, limit = 10 } = {}) => {
+const getRecordsByAdmin = async (adminId, { templateId, search = "", page = 1, limit = 10, submittedBy } = {}) => {
   try {
-    const skip = (page - 1) * limit;
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.max(1, parseInt(limit) || 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Ultra-fast indexed path for standard pagination / browsing / bulk exports
+    if (!search || search.trim() === "") {
+      const query = {
+        adminId: new mongoose.Types.ObjectId(adminId)
+      };
+      if (templateId) {
+        query.templateId = new mongoose.Types.ObjectId(templateId);
+      }
+      if (submittedBy) {
+        query.submittedBy = new mongoose.Types.ObjectId(submittedBy);
+      }
+
+      const [totalItems, records] = await Promise.all([
+        Record.countDocuments(query),
+        Record.find(query)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limitNum)
+          .populate("templateId", "name image")
+          .lean()
+      ]);
+
+      const formattedRecords = records.map((r) => ({
+        ...r,
+        templateId: r.templateId && typeof r.templateId === "object"
+          ? { _id: r.templateId._id, name: r.templateId.name, image: r.templateId.image }
+          : r.templateId
+      }));
+
+      return {
+        records: formattedRecords,
+        totalItems,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalItems / limitNum) || 1
+      };
+    }
     
     // Base match for adminId and optional templateId
     const matchStage = {
@@ -38,6 +77,9 @@ const getRecordsByAdmin = async (adminId, { templateId, search = "", page = 1, l
     
     if (templateId) {
       matchStage.templateId = new mongoose.Types.ObjectId(templateId);
+    }
+    if (submittedBy) {
+      matchStage.submittedBy = new mongoose.Types.ObjectId(submittedBy);
     }
     
     // Search match
